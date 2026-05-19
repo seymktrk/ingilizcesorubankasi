@@ -34,6 +34,18 @@ export default function TeacherDashboard() {
             Sınavları Yönet
           </Link>
         </div>
+
+        <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <h3>Öğrenci Girişi QR Kodu</h3>
+          <p style={{ color: 'var(--text-muted)', margin: '1rem 0', textAlign: 'center' }}>
+            Öğrencilerinizin ana sayfaya veya öğrenci paneline hızlıca erişmesi için bu QR kodu okutmasını sağlayabilirsiniz.
+          </p>
+          <img 
+            src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://ingilizcesorubankasi-rpnr.vercel.app/student" 
+            alt="Öğrenci Girişi QR" 
+            style={{ borderRadius: '12px', padding: '10px', background: 'white' }} 
+          />
+        </div>
       </div>
     </div>
   );

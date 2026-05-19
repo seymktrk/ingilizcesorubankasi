@@ -29,7 +29,12 @@ const handler = NextAuth({
     async signIn({ user, account, profile }) {
       if (!user.email) return false;
       
-      // Auto-create or fetch user from DB
+      // If it's the hardcoded teacher from credentials, just let them in.
+      if (user.id === "teacher") {
+        return true;
+      }
+
+      // Auto-create or fetch user from DB for Google
       const existingUser = await prisma.user.findUnique({
         where: { email: user.email }
       });
@@ -40,26 +45,32 @@ const handler = NextAuth({
             email: user.email,
             name: user.name,
             image: user.image,
-            role: "TEACHER" // Defaulting to teacher for demo, in real app needs logic
+            role: "STUDENT" // Default role for others
           }
         });
       }
       return true;
     },
+    async jwt({ token, user }) {
+      // Pass the user role to the token if it's available
+      if (user) {
+        token.role = (user as any).role;
+        token.id = user.id;
+      }
+      return token;
+    },
     async session({ session, token }) {
-      if (session.user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email }
-        });
-        if (dbUser) {
-          // @ts-ignore
-          session.user.id = dbUser.id;
-          // @ts-ignore
-          session.user.role = dbUser.role;
-        }
+      if (token && session.user) {
+        // @ts-ignore
+        session.user.id = token.id;
+        // @ts-ignore
+        session.user.role = token.role || "STUDENT";
       }
       return session;
     }
+  },
+  session: {
+    strategy: "jwt"
   }
 })
 

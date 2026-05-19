@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 export default function TeacherLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -19,9 +20,12 @@ export default function TeacherLogin() {
     });
 
     if (res?.error) {
-      setError("Hatalı şifre. Lütfen tekrar deneyin.");
+      setError("Şifreniz yanlış tekrar deneyiniz.");
     } else {
-      router.push("/teacher");
+      setSuccess("Şifre doğru, sayfaya yönlendiriliyorsunuz...");
+      setTimeout(() => {
+        router.push("/teacher");
+      }, 1500);
     }
   };
 
@@ -33,6 +37,12 @@ export default function TeacherLogin() {
         {error && (
           <div style={{ color: 'red', marginBottom: '1rem', padding: '0.5rem', background: 'rgba(255,0,0,0.1)', borderRadius: '8px' }}>
             {error}
+          </div>
+        )}
+        
+        {success && (
+          <div style={{ color: 'green', marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,255,0,0.1)', borderRadius: '8px' }}>
+            {success}
           </div>
         )}
 
