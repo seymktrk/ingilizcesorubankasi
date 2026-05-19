@@ -27,48 +27,37 @@ function StudentTestLogic() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [resultId, setResultId] = useState<string | null>(null);
+  
+  const [isNameSubmitted, setIsNameSubmitted] = useState(false);
   const [isStarted, setIsStarted] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [activeTestId, setActiveTestId] = useState<string | null>(null);
+  const [allTests, setAllTests] = useState<any[]>([]);
+  const [loadingTests, setLoadingTests] = useState(false);
   
   const [correctCount, setCorrectCount] = useState(0);
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes global timer
   
-  // Track answer details for DB
-  const [answerDetails, setAnswerDetails] = useState<any[]>([]);
-  
-  // Track class stats for post-test evaluation
-  const [classStats, setClassStats] = useState<any[]>([]);
-
   useEffect(() => {
-    async function loadTest() {
-      if (testId) {
-        try {
-          const res = await fetch(`/api/tests/${testId}`);
-          const data = await res.json();
-          if (data.test && data.test.questions) {
-            // Map the DB questions to the format we use locally
-            const formatted = data.test.questions.map((q: any) => ({
-              id: q.id,
-              content: q.content,
-              options: [q.optionA, q.optionB, q.optionC, q.optionD],
-              correctIndex: ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer)
-            }));
-            setQuestions(formatted.sort(() => Math.random() - 0.5));
-            setTimeLeft(data.test.questions.length * data.test.timeLimitSec); // Calculate total time based on per-question limit
-          }
-        } catch (e) {
-          console.error(e);
+    async function fetchTests() {
+      setLoadingTests(true);
+      try {
+        const res = await fetch('/api/tests');
+        const data = await res.json();
+        if (data.success && data.tests) {
+          setAllTests(data.tests);
         }
-      } else {
-        // Fallback demo questions if no testId
-        setQuestions([...defaultMockQuestions].sort(() => Math.random() - 0.5));
+      } catch (err) {
+        console.error("Error fetching active tests:", err);
+      } finally {
+        setLoadingTests(false);
+        setLoading(false);
       }
-      setLoading(false);
     }
-    loadTest();
-  }, [testId]);
+    fetchTests();
+  }, []);
 
   useEffect(() => {
     if (!isStarted || isFinished || timeLeft <= 0 || questions.length === 0 || loading) return;
@@ -86,45 +75,55 @@ function StudentTestLogic() {
     return () => clearInterval(timer);
   }, [isStarted, isFinished, timeLeft, questions.length, loading]);
 
-  const startTest = async (e: React.FormEvent) => {
+  const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!studentName.trim()) return;
-    
+    setIsNameSubmitted(true);
+  };
+
+  const selectAndStartTest = async (chosenTestId: string | null) => {
     setStarting(true);
-    if (testId) {
+    setActiveTestId(chosenTestId);
+    
+    if (chosenTestId) {
       try {
-        const res = await fetch('/api/results/start', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ testId, studentName })
-        });
+        const res = await fetch(`/api/tests/${chosenTestId}`);
         const data = await res.json();
-        if (data.success) {
-          setResultId(data.resultId);
+        if (data.test && data.test.questions) {
+          const formatted = data.test.questions.map((q: any) => ({
+            id: q.id,
+            content: q.content,
+            options: [q.optionA, q.optionB, q.optionC, q.optionD],
+            correctIndex: ['A', 'B', 'C', 'D'].indexOf(q.correctAnswer)
+          }));
+          setQuestions(formatted.sort(() => Math.random() - 0.5));
+          setTimeLeft(data.test.questions.length * data.test.timeLimitSec);
+          
+          const startRes = await fetch('/api/results/start', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ testId: chosenTestId, studentName })
+          });
+          const startData = await startRes.json();
+          if (startData.success) {
+            setResultId(startData.resultId);
+          }
         }
       } catch (err) {
-        console.error(err);
+        console.error("Test load/start error:", err);
       }
+    } else {
+      // Fallback demo questions
+      setQuestions([...defaultMockQuestions].sort(() => Math.random() - 0.5));
+      setTimeLeft(300);
     }
+    
     setIsStarted(true);
     setStarting(false);
   };
 
   const finishTest = async () => {
     setIsFinished(true);
-    
-    // Fetch class stats for evaluation
-    if (testId) {
-      try {
-        const res = await fetch(`/api/tests/${testId}/live`);
-        const json = await res.json();
-        if (json.success && json.stats) {
-          setClassStats(json.stats);
-        }
-      } catch (e) {
-        console.error("Stats fetch error:", e);
-      }
-    }
   };
 
   const formatTime = (seconds: number) => {
@@ -176,16 +175,15 @@ function StudentTestLogic() {
     }
   };
 
-  if (loading) return <div className="container flex-center">Sınav Yükleniyor...</div>;
-  if (questions.length === 0) return <div className="container flex-center">Test bulunamadı.</div>;
+  if (loading) return <div className="container flex-center">Sınavlar Yükleniyor...</div>;
 
-  if (!isStarted) {
+  if (!isNameSubmitted) {
     return (
       <div className="container animate-fade-in flex-center" style={{ minHeight: '80vh' }}>
         <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Sınava Giriş</h2>
-          <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Lütfen başlamadan önce adınızı ve soyadınızı giriniz.</p>
-          <form onSubmit={startTest} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Öğrenci Girişi</h2>
+          <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Sınavlara katılabilmek için lütfen adınızı ve soyadınızı giriniz.</p>
+          <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <input
               type="text"
               placeholder="Adınız Soyadınız"
@@ -202,10 +200,131 @@ function StudentTestLogic() {
               }}
               required
             />
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={starting}>
-              {starting ? 'Başlatılıyor...' : 'Sınava Başla'}
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
+              Sınav Seçimine İlerle ➔
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isStarted) {
+    const qrTest = allTests.find(t => t.id === testId);
+    return (
+      <div className="container animate-fade-in" style={{ padding: '2rem 0', minHeight: '80vh', maxWidth: '800px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+          <div>
+            <h2 style={{ color: 'var(--primary)' }}>Hoş Geldin, {studentName}!</h2>
+            <p style={{ color: 'var(--text-muted)' }}>Lütfen katılmak istediğin sınavı aşağıdan seç.</p>
+          </div>
+          <button className="btn btn-secondary" onClick={() => setIsNameSubmitted(false)} style={{ fontSize: '0.9rem' }}>
+            İsmi Değiştir
+          </button>
+        </div>
+
+        {testId && qrTest && (
+          <div className="glass-panel" style={{ 
+            background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--secondary-rgb), 0.15))', 
+            border: '2px solid var(--primary)',
+            marginBottom: '2rem',
+            padding: '2rem',
+            borderRadius: '16px'
+          }}>
+            <span style={{ 
+              background: 'var(--primary)', 
+              color: 'white', 
+              padding: '0.25rem 0.75rem', 
+              borderRadius: '20px', 
+              fontSize: '0.8rem', 
+              fontWeight: 'bold',
+              display: 'inline-block',
+              marginBottom: '1rem'
+            }}>
+              QR KOD İLE OKUTULAN SINAV
+            </span>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>{qrTest.title}</h3>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+              Sınıf: {qrTest.targetClass}. Sınıf | Soru Sayısı: {qrTest.questions?.length || qrTest._count?.questions || 0} Soru | Süre: {qrTest.timeLimitSec}sn/soru
+            </p>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => selectAndStartTest(qrTest.id)} 
+              disabled={starting}
+              style={{ padding: '1rem 2rem', fontSize: '1.1rem' }}
+            >
+              {starting ? 'Başlatılıyor...' : 'Sınava Hemen Başla ⚡'}
+            </button>
+          </div>
+        )}
+
+        <div className="glass-panel">
+          <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            🔴 Aktif ve Mevcut Sınavlar
+          </h3>
+          
+          {loadingTests ? (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Sınavlar yükleniyor...</p>
+          ) : allTests.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Henüz oluşturulmuş aktif bir sınav bulunmuyor.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {allTests.map(t => (
+                <div key={t.id} style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center', 
+                  padding: '1.25rem', 
+                  border: '1px solid var(--border)', 
+                  borderRadius: '12px',
+                  background: 'rgba(255,255,255,0.02)',
+                  transition: 'transform 0.2s',
+                  cursor: 'pointer'
+                }}
+                onClick={() => !starting && selectAndStartTest(t.id)}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div>
+                    <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--text)' }}>{t.title}</h4>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                      Sınıf: {t.targetClass}. Sınıf | {t.questions?.length || t._count?.questions || 0} Soru | Süre: {t.timeLimitSec}sn/soru
+                    </p>
+                  </div>
+                  <button 
+                    className="btn btn-secondary" 
+                    onClick={(e) => { e.stopPropagation(); selectAndStartTest(t.id); }} 
+                    disabled={starting}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    Katıl ➔
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={{ 
+            marginTop: '2rem', 
+            paddingTop: '1.5rem', 
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+          }}>
+            <div>
+              <h4 style={{ color: 'var(--text)' }}>Pratik Yapmak İster Misin?</h4>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Herhangi bir öğretmenin sınavı olmadan demo sorularla pratik yapabilirsiniz.</p>
+            </div>
+            <button 
+              className="btn btn-secondary" 
+              onClick={() => selectAndStartTest(null)}
+              disabled={starting}
+              style={{ background: 'rgba(255,255,255,0.05)' }}
+            >
+              Demo Sınavı Başlat ⚙️
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -240,45 +359,22 @@ function StudentTestLogic() {
               <div style={{ color: 'var(--text-muted)' }}>Boş ({emptyCount})</div>
             </div>
           </div>
-          <button className="btn btn-primary" onClick={() => window.location.href = '/'}>
-            Ana Sayfaya Dön
-          </button>
-        </div>
-
-        {classStats.length > 0 && (
-          <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', marginTop: '2rem' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
-              Sınıfın Genel Durumu
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {classStats.map((s, idx) => (
-                <div key={s.questionId} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div style={{ fontWeight: 'bold' }}>Soru {s.questionIndex}</div>
-                    <div style={{ fontWeight: 'bold', color: s.correctPct >= 50 ? 'var(--success)' : 'var(--danger)' }}>
-                      % {s.correctPct} Doğru
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{s.content}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 'bold' }}>A:</span> %{s.optionsPct?.A}
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 'bold' }}>B:</span> %{s.optionsPct?.B}
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 'bold' }}>C:</span> %{s.optionsPct?.C}
-                    </div>
-                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
-                      <span style={{ fontWeight: 'bold' }}>D:</span> %{s.optionsPct?.D}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+          
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
+            <button className="btn btn-secondary" onClick={() => window.location.href = '/'}>
+              Ana Sayfaya Dön
+            </button>
+            {activeTestId && (
+              <button 
+                className="btn btn-primary" 
+                onClick={() => window.location.href = `/student/stats?testId=${activeTestId}&studentName=${encodeURIComponent(studentName)}`}
+                style={{ background: 'var(--primary)', color: 'white' }}
+              >
+                📊 Sınıf İstatistiklerini İncele
+              </button>
+            )}
           </div>
-        )}
+        </div>
       </div>
     );
   }

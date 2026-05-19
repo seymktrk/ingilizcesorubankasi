@@ -45,3 +45,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sınav kaydedilemedi: " + error.message }, { status: 500 });
   }
 }
+
+export async function GET() {
+  try {
+    const tests = await prisma.test.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: {
+          select: { questions: true }
+        }
+      }
+    });
+    return NextResponse.json({ success: true, tests });
+  } catch (error: any) {
+    console.error("Tests fetch error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+

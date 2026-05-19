@@ -17,9 +17,9 @@ Bu proje, lise öğrencileri (9, 10, 11 ve 12. Sınıflar) için özel olarak ge
   - Sınav sırasındaki anlık doğru/yanlış dağılımı (Soru 1: %80 Doğru, A: %10, B: %80 vb.) her soru için "Genel Değerlendirme" ekranında gösterilir. Sınıfça soruların analizini yapmak için kusursuzdur.
 
 ### 👨‍🎓 Öğrenci Deneyimi
-- **Hızlı Giriş:** Akıllı tahtadaki QR kodu okutarak veya ana sayfadan tıklayarak anında sınava katılım.
-- **İsimle Katılım:** Öğrenciler kendi adlarını yazarak sınava başlar.
-- **Toplu Değerlendirme Ekranı:** Öğrenci kendi sınavını bitirdiğinde, kendi skorunun yanı sıra "Sınıfın Genel Durumu" panelini de görür. Böylece zorlandığı bir soruyu sınıfın geneli nasıl yapmış, onu değerlendirebilir.
+- **Hızlı Giriş:** Akıllı tahtadaki QR kodu okutarak veya ana sayfadan girerek anında sınava katılım.
+- **Giriş ve Sınav Seçimi:** Öğrenci kendi adını yazıp giriş yaptıktan sonra o anda aktif/yayında olan tüm sınavları listeleyebilir, öğretmenin başlattığı sınava sonradan kolayca dahil olabilir.
+- **Ayrı Sınıf İstatistikleri Ekranı:** Öğrenci sınavını bitirdiğinde sayfa düzeninin kaymaması için tasarlanmış özel bir butonla `/student/stats` sayfasına giderek sınıfın genel değerlendirme ve şık analizini mobil uyumlu premium arayüzden detaylıca inceleyebilir.
 - **Modern Arayüz:** Glassmorphism tasarım trendi ile geliştirilmiş, göz yormayan, telefon ve tablet uyumlu (Responsive) ekran.
 
 ---
