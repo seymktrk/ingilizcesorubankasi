@@ -8,6 +8,11 @@ export default function LiveTestDashboard({ params }: { params: { id: string } }
   const [testTitle, setTestTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     const fetchLive = async () => {
@@ -39,13 +44,36 @@ export default function LiveTestDashboard({ params }: { params: { id: string } }
 
   return (
     <div className="container animate-fade-in" style={{ padding: '2rem 0' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem' }}>
         <div>
-          <h2 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>{testTitle} (Canlı)</h2>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>{testTitle} (Canlı İzleme)</h2>
           <p style={{ color: 'var(--success)', fontWeight: 'bold' }}>🔴 Sınav Takibi Aktif (3 saniyede bir güncellenir)</p>
         </div>
         <Link href="/teacher/tests" className="btn btn-secondary">Geri Dön</Link>
       </header>
+
+      {/* QR Code Section for Smartboard Projection */}
+      {origin && (
+        <div className="glass-panel" style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem', background: 'rgba(255,255,255,0.05)' }}>
+          <div style={{ padding: '1rem', background: 'white', borderRadius: '16px' }}>
+            <img 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${origin}/student?testId=${params.id}`} 
+              alt="Sınav QR Kodu" 
+              width={200}
+              height={200}
+            />
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>Öğrenciler İçin Sınav Bağlantısı</h3>
+            <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', marginBottom: '0.5rem' }}>
+              Öğrencilerinizin sınava katılması için yandaki QR kodu telefonlarından okutmalarını isteyin.
+            </p>
+            <p style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 1rem', borderRadius: '8px', display: 'inline-block' }}>
+              {origin}/student?testId={params.id}
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="glass-panel">
         {data.length === 0 ? (

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import prisma from '@/lib/prisma';
-import QrButton from './QrButton';
 
 // Server Component fetching from DB
 export default async function TestsPage() {
@@ -30,7 +29,9 @@ export default async function TestsPage() {
                       Hedef: {t.targetClass}. Sınıf | {t.questions.length} Soru | Süre: {t.timeLimitSec}sn/soru
                     </p>
                   </div>
-                  <QrButton testId={t.id} />
+                  <Link href={`/teacher/tests/${t.id}`} className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+                    Sınavı Başlat / Canlı İzle
+                  </Link>
                 </div>
                 
                 <details style={{ marginTop: '0.5rem', cursor: 'pointer' }}>

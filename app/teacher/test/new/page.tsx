@@ -45,7 +45,7 @@ export default function NewTestPage() {
       const data = await res.json();
       if (data.success) {
         alert("Sınav başarıyla oluşturuldu! Sınav ID: " + data.test.id);
-        window.location.href = '/teacher';
+        window.location.href = '/teacher/tests/' + data.test.id;
       } else {
         alert(data.error);
       }
