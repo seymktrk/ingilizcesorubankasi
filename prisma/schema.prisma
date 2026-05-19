@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(STUDENT)
+  classLevel    String?   // e.g., "9", "10", "11", "12"
+  tests         Test[]    @relation("TeacherTests")
+  results       Result[]
+}
+
+enum Role {
+  TEACHER
+  STUDENT
+}
+
+model Test {
+  id            String     @id @default(cuid())
+  title         String
+  targetClass   String     // "9", "10", "11", "12"
+  timeLimitSec  Int        @default(60) // Per question time limit
+  teacherId     String
+  teacher       User       @relation("TeacherTests", fields: [teacherId], references: [id])
+  questions     Question[]
+  results       Result[]
+  createdAt     DateTime   @default(now())
+}
+
+model Question {
+  id            String         @id @default(cuid())
+  testId        String
+  test          Test           @relation(fields: [testId], references: [id])
+  content       String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer String         // "A", "B", "C", "D"
+  grammarFocus  String         // "Present Perfect", "Past Perfect", "Contrast"
+  contextHint   String?
+  answers       AnswerDetail[]
+}
+
+model Result {
+  id            String         @id @default(cuid())
+  testId        String
+  test          Test           @relation(fields: [testId], references: [id])
+  studentId     String
+  student       User           @relation(fields: [studentId], references: [id])
+  totalScore    Int
+  createdAt     DateTime       @default(now())
+  details       AnswerDetail[]
+}
+
+model AnswerDetail {
+  id             String   @id @default(cuid())
+  resultId       String
+  result         Result   @relation(fields: [resultId], references: [id])
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id])
+  selectedOption String?  // "A", "B", "C", "D" or null if unanswered
+  isCorrect      Boolean
+  timeSpentSec   Int
+}
