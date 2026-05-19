@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import LogoutButton from './LogoutButton';
 
 export default function TeacherDashboard() {
   return (
@@ -6,7 +7,7 @@ export default function TeacherDashboard() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
         <h2>Öğretmen Paneli</h2>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link href="/" className="btn btn-secondary">Çıkış Yap</Link>
+          <LogoutButton />
         </div>
       </header>
 
