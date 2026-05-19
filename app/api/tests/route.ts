@@ -56,7 +56,16 @@ export async function GET() {
         }
       }
     });
-    return NextResponse.json({ success: true, tests });
+
+    // Filter tests by active teacher session in the last 10 seconds
+    const now = Date.now();
+    const activeTeacherTests = (global as any).activeTeacherTests || {};
+    const filteredTests = tests.filter(test => {
+      const lastActive = activeTeacherTests[test.id];
+      return lastActive && (now - lastActive < 10000); // 10 seconds timeout
+    });
+
+    return NextResponse.json({ success: true, tests: filteredTests });
   } catch (error: any) {
     console.error("Tests fetch error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

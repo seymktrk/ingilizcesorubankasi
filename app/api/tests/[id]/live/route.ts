@@ -5,6 +5,12 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
   try {
     const testId = params.id;
 
+    // Mark this test as active in global memory (Teacher is actively viewing/managing)
+    if (!(global as any).activeTeacherTests) {
+      (global as any).activeTeacherTests = {};
+    }
+    (global as any).activeTeacherTests[testId] = Date.now();
+
     // Fetch the test details just to know total questions and their original order
     const test = await prisma.test.findUnique({
       where: { id: testId },
