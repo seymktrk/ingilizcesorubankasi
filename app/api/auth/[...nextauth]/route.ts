@@ -2,6 +2,8 @@ import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import prisma from "@/lib/prisma"
 
+import CredentialsProvider from "next-auth/providers/credentials"
+
 // A simple implementation without the full PrismaAdapter for brevity, 
 // normally we would use @next-auth/prisma-adapter
 const handler = NextAuth({
@@ -10,6 +12,18 @@ const handler = NextAuth({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
+    CredentialsProvider({
+      name: "Teacher Login",
+      credentials: {
+        password: { label: "Password", type: "password" }
+      },
+      async authorize(credentials) {
+        if (credentials?.password === "12345") {
+          return { id: "teacher", name: "Teacher", email: "teacher@example.com", role: "TEACHER" } as any;
+        }
+        return null;
+      }
+    })
   ],
   callbacks: {
     async signIn({ user, account, profile }) {
