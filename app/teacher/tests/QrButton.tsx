@@ -1,19 +1,18 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 export default function QrButton({ testId }: { testId: string }) {
   const [showQr, setShowQr] = useState(false);
+  const [origin, setOrigin] = useState("");
   const router = useRouter();
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
 
   const handleClick = () => {
     setShowQr(true);
-    // Wait 5 seconds, then redirect to student page
-    setTimeout(() => {
-      // Passing testId to student interface (student interface currently uses mock data, 
-      // but this sets up the correct real architecture)
-      router.push(`/student?testId=${testId}`);
-    }, 5000);
   };
 
   return (
@@ -34,16 +33,19 @@ export default function QrButton({ testId }: { testId: string }) {
           
           <div style={{ padding: '1rem', background: 'white', borderRadius: '16px', animation: 'fadeIn 0.3s ease' }}>
             <img 
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=http://localhost:5000/student?testId=${testId}`} 
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${origin}/student?testId=${testId}`} 
               alt="Sınav QR Kodu" 
               width={250}
               height={250}
             />
           </div>
 
-          <p style={{ marginTop: '2rem', color: 'var(--text-muted)', fontSize: '1.2rem', animation: 'fadeIn 1s ease' }}>
-            ⏳ 5 saniye içinde sınav ekranına yönlendiriliyorsunuz...
-          </p>
+          <div style={{ marginTop: '2rem', display: 'flex', gap: '1rem', animation: 'fadeIn 1s ease' }}>
+            <button className="btn btn-secondary" onClick={() => setShowQr(false)}>Kapat</button>
+            <button className="btn btn-primary" onClick={() => router.push(`/teacher/tests/${testId}`)}>
+              Canlı İzleme Ekranına Git
+            </button>
+          </div>
         </div>
       )}
     </>

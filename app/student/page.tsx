@@ -25,6 +25,10 @@ function StudentTestLogic() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [studentName, setStudentName] = useState("");
+  const [resultId, setResultId] = useState<string | null>(null);
+  const [isStarted, setIsStarted] = useState(false);
+  const [starting, setStarting] = useState(false);
   
   const [correctCount, setCorrectCount] = useState(0);
   const [incorrectCount, setIncorrectCount] = useState(0);
@@ -64,7 +68,7 @@ function StudentTestLogic() {
   }, [testId]);
 
   useEffect(() => {
-    if (isFinished || timeLeft <= 0 || questions.length === 0 || loading) return;
+    if (!isStarted || isFinished || timeLeft <= 0 || questions.length === 0 || loading) return;
     
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -77,21 +81,37 @@ function StudentTestLogic() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isFinished, timeLeft, questions.length, loading]);
+  }, [isStarted, isFinished, timeLeft, questions.length, loading]);
+
+  const startTest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!studentName.trim()) return;
+    
+    setStarting(true);
+    if (testId) {
+      try {
+        const res = await fetch('/api/results/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ testId, studentName })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setResultId(data.resultId);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    setIsStarted(true);
+    setStarting(false);
+  };
 
   const finishTest = async () => {
     setIsFinished(true);
-    // Send to DB
-    if (testId) {
-      await fetch('/api/results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          testId,
-          totalScore: correctCount * 10, // simple scoring
-          details: answerDetails
-        })
-      });
+    // If not using real DB or if it's the mock test, we do nothing special since live answers are recorded.
+    if (!testId) {
+      // Mock finish
     }
   };
 
@@ -108,7 +128,7 @@ function StudentTestLogic() {
     setSelectedOption(index);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (selectedOption === null) return;
     
     const currentQ = questions[currentIndex];
@@ -117,13 +137,19 @@ function StudentTestLogic() {
     if (isCorrect) setCorrectCount(prev => prev + 1);
     else setIncorrectCount(prev => prev + 1);
 
-    // Record answer detail
-    setAnswerDetails(prev => [...prev, {
-      questionId: currentQ.id,
-      selectedOption: labels[selectedOption],
-      isCorrect: isCorrect,
-      timeSpentSec: 10 // mock time spent for now
-    }]);
+    if (resultId) {
+      await fetch('/api/results/answer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          resultId,
+          questionId: currentQ.id,
+          selectedOption: labels[selectedOption],
+          isCorrect,
+          timeSpentSec: 10
+        })
+      });
+    }
 
     setIsSubmitted(true);
   };
@@ -140,6 +166,38 @@ function StudentTestLogic() {
 
   if (loading) return <div className="container flex-center">Sınav Yükleniyor...</div>;
   if (questions.length === 0) return <div className="container flex-center">Test bulunamadı.</div>;
+
+  if (!isStarted) {
+    return (
+      <div className="container animate-fade-in flex-center" style={{ minHeight: '80vh' }}>
+        <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
+          <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Sınava Giriş</h2>
+          <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Lütfen başlamadan önce adınızı ve soyadınızı giriniz.</p>
+          <form onSubmit={startTest} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <input
+              type="text"
+              placeholder="Adınız Soyadınız"
+              value={studentName}
+              onChange={(e) => setStudentName(e.target.value)}
+              style={{
+                padding: '1rem',
+                borderRadius: '12px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: 'var(--text)',
+                fontSize: '1rem',
+                outline: 'none'
+              }}
+              required
+            />
+            <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={starting}>
+              {starting ? 'Başlatılıyor...' : 'Sınava Başla'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   if (isFinished) {
     const total = questions.length;
