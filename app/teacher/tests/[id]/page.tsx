@@ -5,6 +5,7 @@ import Link from "next/link";
 
 export default function LiveTestDashboard({ params }: { params: { id: string } }) {
   const [data, setData] = useState<any[]>([]);
+  const [stats, setStats] = useState<any[]>([]);
   const [testTitle, setTestTitle] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,6 +22,7 @@ export default function LiveTestDashboard({ params }: { params: { id: string } }
         const json = await res.json();
         if (json.success) {
           setData(json.data);
+          setStats(json.stats || []);
           setTestTitle(json.testTitle);
         } else {
           setError(json.error || "Hata oluştu.");
@@ -71,6 +73,45 @@ export default function LiveTestDashboard({ params }: { params: { id: string } }
             <p style={{ fontFamily: 'monospace', background: 'rgba(0,0,0,0.3)', padding: '0.5rem 1rem', borderRadius: '8px', display: 'inline-block' }}>
               {origin}/student?testId={params.id}
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* Question Statistics Section */}
+      {stats && stats.length > 0 && (
+        <div className="glass-panel" style={{ marginBottom: '2rem' }}>
+          <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+            Sınıf Geneli Soru İstatistikleri
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {stats.map((s, idx) => (
+              <div key={s.questionId} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ fontWeight: 'bold' }}>Soru {s.questionIndex}</div>
+                  <div style={{ fontWeight: 'bold', color: s.correctPct >= 50 ? 'var(--success)' : 'var(--danger)' }}>
+                    % {s.correctPct} Doğru
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{s.content}</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 'bold' }}>A:</span> %{s.optionsPct?.A}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 'bold' }}>B:</span> %{s.optionsPct?.B}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 'bold' }}>C:</span> %{s.optionsPct?.C}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                    <span style={{ fontWeight: 'bold' }}>D:</span> %{s.optionsPct?.D}
+                  </div>
+                </div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'right', marginTop: '0.5rem' }}>
+                  Toplam {s.totalAnswers} yanıt
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}

@@ -37,6 +37,9 @@ function StudentTestLogic() {
   
   // Track answer details for DB
   const [answerDetails, setAnswerDetails] = useState<any[]>([]);
+  
+  // Track class stats for post-test evaluation
+  const [classStats, setClassStats] = useState<any[]>([]);
 
   useEffect(() => {
     async function loadTest() {
@@ -109,9 +112,18 @@ function StudentTestLogic() {
 
   const finishTest = async () => {
     setIsFinished(true);
-    // If not using real DB or if it's the mock test, we do nothing special since live answers are recorded.
-    if (!testId) {
-      // Mock finish
+    
+    // Fetch class stats for evaluation
+    if (testId) {
+      try {
+        const res = await fetch(`/api/tests/${testId}/live`);
+        const json = await res.json();
+        if (json.success && json.stats) {
+          setClassStats(json.stats);
+        }
+      } catch (e) {
+        console.error("Stats fetch error:", e);
+      }
     }
   };
 
@@ -232,6 +244,41 @@ function StudentTestLogic() {
             Ana Sayfaya Dön
           </button>
         </div>
+
+        {classStats.length > 0 && (
+          <div className="glass-panel" style={{ width: '100%', maxWidth: '600px', marginTop: '2rem' }}>
+            <h3 style={{ fontSize: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+              Sınıfın Genel Durumu
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {classStats.map((s, idx) => (
+                <div key={s.questionId} style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: '1rem', background: 'rgba(0,0,0,0.2)', borderRadius: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontWeight: 'bold' }}>Soru {s.questionIndex}</div>
+                    <div style={{ fontWeight: 'bold', color: s.correctPct >= 50 ? 'var(--success)' : 'var(--danger)' }}>
+                      % {s.correctPct} Doğru
+                    </div>
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>{s.content}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>A:</span> %{s.optionsPct?.A}
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>B:</span> %{s.optionsPct?.B}
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>C:</span> %{s.optionsPct?.C}
+                    </div>
+                    <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '4px', textAlign: 'center' }}>
+                      <span style={{ fontWeight: 'bold' }}>D:</span> %{s.optionsPct?.D}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
