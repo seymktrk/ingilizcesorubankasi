@@ -26,6 +26,9 @@ function StudentTestLogic() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [studentName, setStudentName] = useState("");
+  const [studentFirstName, setStudentFirstName] = useState("");
+  const [studentLastName, setStudentLastName] = useState("");
+  const [nameInputStep, setNameInputStep] = useState(1); // 1: First name, 2: Last name
   const [resultId, setResultId] = useState<string | null>(null);
   
   const [isNameSubmitted, setIsNameSubmitted] = useState(false);
@@ -91,10 +94,17 @@ function StudentTestLogic() {
     return () => clearInterval(timer);
   }, [isStarted, isFinished, timeLeft, questions.length, loading]);
 
-  const handleNameSubmit = (e: React.FormEvent) => {
+  const handleNameStepSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentName.trim()) return;
-    setIsNameSubmitted(true);
+    if (nameInputStep === 1) {
+      if (!studentFirstName.trim()) return;
+      setNameInputStep(2);
+    } else {
+      if (!studentLastName.trim()) return;
+      const fullName = `${studentFirstName.trim()} ${studentLastName.trim()}`;
+      setStudentName(fullName);
+      setIsNameSubmitted(true);
+    }
   };
 
   const selectAndStartTest = async (chosenTestId: string | null) => {
@@ -290,29 +300,119 @@ function StudentTestLogic() {
   if (!isNameSubmitted) {
     return (
       <div className="container animate-fade-in flex-center" style={{ minHeight: '80vh' }}>
-        <div className="glass-panel" style={{ width: '100%', maxWidth: '400px', textAlign: 'center' }}>
-          <h2 style={{ marginBottom: '1.5rem', color: 'var(--primary)' }}>Öğrenci Girişi</h2>
-          <p style={{ marginBottom: '2rem', color: 'var(--text-muted)' }}>Sınavlara katılabilmek için lütfen adınızı ve soyadınızı giriniz.</p>
-          <form onSubmit={handleNameSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <input
-              type="text"
-              placeholder="Adınız Soyadınız"
-              value={studentName}
-              onChange={(e) => setStudentName(e.target.value)}
-              style={{
-                padding: '1rem',
-                borderRadius: '12px',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: 'var(--text)',
-                fontSize: '1rem',
-                outline: 'none'
-              }}
-              required
-            />
-            <button type="submit" className="btn btn-primary" style={{ width: '100%' }}>
-              Sınav Seçimine İlerle ➔
-            </button>
+        <div className="glass-panel" style={{ 
+          width: '100%', 
+          maxWidth: '420px', 
+          textAlign: 'center',
+          position: 'relative',
+          padding: '2.5rem 2rem',
+          boxShadow: '0 8px 32px rgba(79, 70, 229, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02)'
+        }}>
+          {/* Step indicator dots */}
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '2rem' }}>
+            <div style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              backgroundColor: nameInputStep === 1 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.15)',
+              boxShadow: nameInputStep === 1 ? '0 0 12px var(--primary)' : 'none',
+              transform: nameInputStep === 1 ? 'scale(1.2)' : 'scale(1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }} />
+            <div style={{
+              width: '10px',
+              height: '10px',
+              borderRadius: '50%',
+              backgroundColor: nameInputStep === 2 ? 'var(--primary)' : 'rgba(255, 255, 255, 0.15)',
+              boxShadow: nameInputStep === 2 ? '0 0 12px var(--primary)' : 'none',
+              transform: nameInputStep === 2 ? 'scale(1.2)' : 'scale(1)',
+              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+            }} />
+          </div>
+
+          <h2 style={{ marginBottom: '0.75rem', color: 'var(--text-main)', fontSize: '1.8rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+            Öğrenci Girişi
+          </h2>
+          
+          <form onSubmit={handleNameStepSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginTop: '0.5rem' }}>
+            {nameInputStep === 1 ? (
+              <div key="step-1" className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                  Sınavlara katılabilmek için lütfen ilk olarak <strong>adınızı</strong> giriniz.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Adınız (Örn: Ahmet)"
+                  value={studentFirstName}
+                  onChange={(e) => setStudentFirstName(e.target.value)}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    color: 'var(--text-main)',
+                    fontSize: '1.05rem',
+                    outline: 'none',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                  autoFocus
+                  required
+                />
+                <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem' }}>
+                  Devam Et ➔
+                </button>
+              </div>
+            ) : (
+              <div key="step-2" className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
+                  Harika! Şimdi de lütfen <strong>soyadınızı</strong> giriniz.
+                </p>
+                <input
+                  type="text"
+                  placeholder="Soyadınız (Örn: Yılmaz)"
+                  value={studentLastName}
+                  onChange={(e) => setStudentLastName(e.target.value)}
+                  style={{
+                    padding: '1rem',
+                    borderRadius: '12px',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    color: 'var(--text-main)',
+                    fontSize: '1.05rem',
+                    outline: 'none',
+                    textAlign: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                  onFocus={(e) => e.target.style.borderColor = 'var(--primary)'}
+                  onBlur={(e) => e.target.style.borderColor = 'rgba(255, 255, 255, 0.15)'}
+                  autoFocus
+                  required
+                />
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button 
+                    type="button" 
+                    className="btn btn-secondary" 
+                    onClick={() => setNameInputStep(1)} 
+                    style={{ 
+                      flex: 1, 
+                      padding: '1rem',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255,255,255,0.1)' 
+                    }}
+                  >
+                    ⬅ Geri
+                  </button>
+                  <button type="submit" className="btn btn-primary" style={{ flex: 2, padding: '1rem' }}>
+                    Sınava Katıl ⚡
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         </div>
       </div>
@@ -329,7 +429,13 @@ function StudentTestLogic() {
             <h2 style={{ color: 'var(--primary)' }}>Hoş Geldin, {studentName}!</h2>
             <p style={{ color: 'var(--text-muted)' }}>Sınav durumunuz ve katılım paneli aşağıda gösterilmektedir.</p>
           </div>
-          <button className="btn btn-secondary" onClick={() => setIsNameSubmitted(false)} style={{ fontSize: '0.9rem' }}>
+          <button className="btn btn-secondary" onClick={() => {
+            setIsNameSubmitted(false);
+            setNameInputStep(1);
+            setStudentFirstName("");
+            setStudentLastName("");
+            setStudentName("");
+          }} style={{ fontSize: '0.9rem' }}>
             İsmi Değiştir
           </button>
         </div>
