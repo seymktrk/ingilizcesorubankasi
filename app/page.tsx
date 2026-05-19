@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import QRScanner from './components/QRScanner';
 
 export default function Home() {
   return (
@@ -10,8 +9,6 @@ export default function Home() {
       <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', marginBottom: '2rem' }}>
         Özellikle Present Perfect ve Past Perfect zamanlarına odaklanan, B1-B2 seviyesi yeni nesil soru platformu.
       </p>
-      
-      <QRScanner />
 
       <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
         <Link href="/teacher" className="btn btn-primary">
