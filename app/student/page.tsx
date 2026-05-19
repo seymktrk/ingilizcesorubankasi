@@ -41,8 +41,10 @@ function StudentTestLogic() {
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes global timer
   
   useEffect(() => {
-    async function fetchTests() {
-      setLoadingTests(true);
+    let intervalId: any;
+    
+    async function fetchTests(isSilent = false) {
+      if (!isSilent) setLoadingTests(true);
       try {
         const res = await fetch('/api/tests');
         const data = await res.json();
@@ -52,12 +54,26 @@ function StudentTestLogic() {
       } catch (err) {
         console.error("Error fetching active tests:", err);
       } finally {
-        setLoadingTests(false);
-        setLoading(false);
+        if (!isSilent) {
+          setLoadingTests(false);
+          setLoading(false);
+        }
       }
     }
-    fetchTests();
-  }, []);
+    
+    // Initial fetch
+    fetchTests(false);
+    
+    if (!isStarted) {
+      intervalId = setInterval(() => {
+        fetchTests(true);
+      }, 4000);
+    }
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isStarted]);
 
   useEffect(() => {
     if (!isStarted || isFinished || timeLeft <= 0 || questions.length === 0 || loading) return;
@@ -211,12 +227,14 @@ function StudentTestLogic() {
 
   if (!isStarted) {
     const qrTest = allTests.find(t => t.id === testId);
+    const hasActiveExam = allTests.length > 0;
+
     return (
       <div className="container animate-fade-in" style={{ padding: '2rem 0', minHeight: '80vh', maxWidth: '800px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div>
             <h2 style={{ color: 'var(--primary)' }}>Hoş Geldin, {studentName}!</h2>
-            <p style={{ color: 'var(--text-muted)' }}>Lütfen katılmak istediğin sınavı aşağıdan seç.</p>
+            <p style={{ color: 'var(--text-muted)' }}>Sınav durumunuz ve katılım paneli aşağıda gösterilmektedir.</p>
           </div>
           <button className="btn btn-secondary" onClick={() => setIsNameSubmitted(false)} style={{ fontSize: '0.9rem' }}>
             İsmi Değiştir
@@ -225,7 +243,7 @@ function StudentTestLogic() {
 
         {testId && qrTest && (
           <div className="glass-panel" style={{ 
-            background: 'linear-gradient(135deg, rgba(var(--primary-rgb), 0.15), rgba(var(--secondary-rgb), 0.15))', 
+            background: 'linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(236, 72, 153, 0.15))', 
             border: '2px solid var(--primary)',
             marginBottom: '2rem',
             padding: '2rem',
@@ -258,74 +276,154 @@ function StudentTestLogic() {
           </div>
         )}
 
-        <div className="glass-panel">
-          <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🔴 Aktif ve Mevcut Sınavlar
-          </h3>
-          
-          {loadingTests ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Sınavlar yükleniyor...</p>
-          ) : allTests.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Henüz oluşturulmuş aktif bir sınav bulunmuyor.</p>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {allTests.map(t => (
-                <div key={t.id} style={{ 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center', 
-                  padding: '1.25rem', 
-                  border: '1px solid var(--border)', 
-                  borderRadius: '12px',
-                  background: 'rgba(255,255,255,0.02)',
-                  transition: 'transform 0.2s',
-                  cursor: 'pointer'
-                }}
-                onClick={() => !starting && selectAndStartTest(t.id)}
-                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
-                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
-                >
-                  <div>
-                    <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--text)' }}>{t.title}</h4>
-                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                      Sınıf: {t.targetClass}. Sınıf | {t.questions?.length || t._count?.questions || 0} Soru | Süre: {t.timeLimitSec}sn/soru
-                    </p>
-                  </div>
-                  <button 
-                    className="btn btn-secondary" 
-                    onClick={(e) => { e.stopPropagation(); selectAndStartTest(t.id); }} 
-                    disabled={starting}
-                    style={{ whiteSpace: 'nowrap' }}
-                  >
-                    Katıl ➔
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div style={{ 
-            marginTop: '2rem', 
-            paddingTop: '1.5rem', 
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center'
+        {!hasActiveExam ? (
+          <div className="glass-panel" style={{ 
+            textAlign: 'center', 
+            padding: '4rem 2rem', 
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95))',
+            boxShadow: '0 8px 32px rgba(239, 68, 68, 0.08), inset 0 0 20px rgba(239, 68, 68, 0.05)',
+            borderRadius: '24px',
+            position: 'relative',
+            overflow: 'hidden'
           }}>
-            <div>
-              <h4 style={{ color: 'var(--text)' }}>Pratik Yapmak İster Misin?</h4>
-              <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Herhangi bir öğretmenin sınavı olmadan demo sorularla pratik yapabilirsiniz.</p>
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '350px',
+              height: '350px',
+              background: 'radial-gradient(circle, rgba(239, 68, 68, 0.12) 0%, rgba(239, 68, 68, 0) 70%)',
+              pointerEvents: 'none',
+              borderRadius: '50%',
+              zIndex: 0
+            }} />
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+                <div style={{
+                  width: '90px',
+                  height: '90px',
+                  borderRadius: '50%',
+                  background: 'rgba(239, 68, 68, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  border: '1px solid rgba(239, 68, 68, 0.25)',
+                  boxShadow: '0 0 30px rgba(239, 68, 68, 0.1)',
+                  animation: 'pulse 2.5s infinite ease-in-out'
+                }}>
+                  <svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '2rem', color: '#fca5a5', marginBottom: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
+                Aktif Bir Sınav Yok!
+              </h3>
+              
+              <p style={{ color: 'var(--text-muted)', fontSize: '1.15rem', lineHeight: '1.7', maxWidth: '600px', margin: '0 auto 2.5rem auto' }}>
+                Şu anda öğretmeniniz tarafından başlatılmış veya tanımlanmış aktif bir sınav bulunmamaktadır. 
+                Sınava giriş yapabilmeniz için öğretmeninizin bir sınav başlatmış olması gerekmektedir.
+              </p>
+
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.85rem',
+                padding: '0.65rem 1.5rem',
+                borderRadius: '50px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                backdropFilter: 'blur(4px)'
+              }}>
+                <span style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '50%',
+                  background: '#22c55e',
+                  boxShadow: '0 0 10px #22c55e',
+                  display: 'inline-block',
+                  animation: 'greenPulse 1.5s infinite ease-in-out'
+                }} />
+                <span style={{ fontSize: '0.95rem', color: '#e2e8f0', fontWeight: '600', letterSpacing: '0.3px' }}>
+                  Canlı Olarak Yeni Sınavlar Taranıyor...
+                </span>
+              </div>
             </div>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => selectAndStartTest(null)}
-              disabled={starting}
-              style={{ background: 'rgba(255,255,255,0.05)' }}
-            >
-              Demo Sınavı Başlat ⚙️
-            </button>
           </div>
-        </div>
+        ) : (
+          <div className="glass-panel">
+            <h3 style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              🔴 Aktif ve Mevcut Sınavlar
+            </h3>
+            
+            {loadingTests ? (
+              <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Sınavlar yükleniyor...</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {allTests.map(t => (
+                  <div key={t.id} style={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center', 
+                    padding: '1.25rem', 
+                    border: '1px solid var(--border)', 
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.02)',
+                    transition: 'transform 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => !starting && selectAndStartTest(t.id)}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                  >
+                    <div>
+                      <h4 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--text)' }}>{t.title}</h4>
+                      <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                        Sınıf: {t.targetClass}. Sınıf | {t.questions?.length || t._count?.questions || 0} Soru | Süre: {t.timeLimitSec}sn/soru
+                      </p>
+                    </div>
+                    <button 
+                      className="btn btn-secondary" 
+                      onClick={(e) => { e.stopPropagation(); selectAndStartTest(t.id); }} 
+                      disabled={starting}
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      Katıl ➔
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ 
+              marginTop: '2rem', 
+              paddingTop: '1.5rem', 
+              borderTop: '1px solid var(--border)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div>
+                <h4 style={{ color: 'var(--text)' }}>Pratik Yapmak İster Misin?</h4>
+                <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>Herhangi bir öğretmenin sınavı olmadan demo sorularla pratik yapabilirsiniz.</p>
+              </div>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => selectAndStartTest(null)}
+                disabled={starting}
+                style={{ background: 'rgba(255,255,255,0.05)' }}
+              >
+                Demo Sınavı Başlat ⚙️
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
