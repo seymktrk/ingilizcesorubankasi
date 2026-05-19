@@ -24,7 +24,7 @@ export default function TeacherLogin() {
     } else {
       setSuccess("Şifre doğru, sayfaya yönlendiriliyorsunuz...");
       setTimeout(() => {
-        router.push("/teacher");
+        window.location.href = "/teacher";
       }, 1500);
     }
   };
